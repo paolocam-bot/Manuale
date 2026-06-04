@@ -18,5 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
       return Promise.reject(err);
     }
   },
+  addTask: (taskData) => ipcRenderer.invoke('add-task', taskData),
+  editTask: (taskId, taskData) => ipcRenderer.invoke('edit-task', taskId, taskData),
+  deleteTask: (taskId) => ipcRenderer.invoke('delete-task', taskId),
+  addType: (typeName) => ipcRenderer.invoke('add-type', typeName),
+  addBranch: (branchName) => ipcRenderer.invoke('add-branch', branchName),
   openExternal: (url) => ipcRenderer.invoke('open-external', url)
 });

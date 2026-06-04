@@ -33,6 +33,12 @@ const defaultData = {
     {
     }
   ]
+  ,
+  types: [
+    { id: 'generico', name: 'Generico' }
+  ],
+  branches: [],
+  tasks: []
 };
 
 // Initialize DB file
@@ -234,6 +240,87 @@ ipcMain.handle('upload-image', async (event, filePath) => {
     throw err;
   }
 });
+
+  // Add Task
+  ipcMain.handle('add-task', async (event, taskData) => {
+    const db = readDb();
+    const newTask = {
+      id: Date.now().toString(),
+      branch: taskData.branch || '',
+      categoryId: taskData.categoryId || '',
+      issueId: taskData.issueId || null,
+      typeId: taskData.typeId || '',
+      status: taskData.status || 'iniziata',
+      note: taskData.note || '',
+      solution: taskData.solution || '',
+      images: taskData.images || [],
+      archived: !!taskData.archived,
+      createdAt: taskData.createdAt || new Date().toISOString(),
+      closedAt: taskData.closedAt || null
+    };
+
+    db.tasks = db.tasks || [];
+    db.tasks.push(newTask);
+
+    // add branch/type to lists if missing
+    db.branches = db.branches || [];
+    if (newTask.branch && !db.branches.includes(newTask.branch)) db.branches.push(newTask.branch);
+    db.types = db.types || [];
+    if (newTask.typeId && !db.types.find(t => t.id === newTask.typeId)) db.types.push({ id: newTask.typeId, name: newTask.typeId });
+
+    writeDb(db);
+    return db;
+  });
+
+  // Edit Task
+  ipcMain.handle('edit-task', async (event, taskId, updatedData) => {
+    const db = readDb();
+    db.tasks = db.tasks || [];
+    const idx = db.tasks.findIndex(t => t.id === taskId);
+    if (idx === -1) throw new Error('Task non trovato');
+
+    db.tasks[idx] = {
+      ...db.tasks[idx],
+      ...updatedData
+    };
+
+    // if status set to conclusa, mark archived
+    if (db.tasks[idx].status === 'conclusa') db.tasks[idx].archived = true;
+
+    writeDb(db);
+    return db;
+  });
+
+  // Delete Task
+  ipcMain.handle('delete-task', async (event, taskId) => {
+    const db = readDb();
+    db.tasks = db.tasks || [];
+    db.tasks = db.tasks.filter(t => t.id !== taskId);
+    writeDb(db);
+    return db;
+  });
+
+  // Add Type
+  ipcMain.handle('add-type', async (event, typeName) => {
+    const db = readDb();
+    const id = typeName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    if (!db.types) db.types = [];
+    if (db.types.find(t => t.id === id || t.name.toLowerCase() === typeName.toLowerCase())) {
+      throw new Error('Tipo già esistente');
+    }
+    db.types.push({ id, name: typeName });
+    writeDb(db);
+    return db;
+  });
+
+  // Add Branch
+  ipcMain.handle('add-branch', async (event, branchName) => {
+    const db = readDb();
+    db.branches = db.branches || [];
+    if (!db.branches.includes(branchName)) db.branches.push(branchName);
+    writeDb(db);
+    return db;
+  });
 
 // Open external links (safely)
 ipcMain.handle('open-external', async (event, url) => {

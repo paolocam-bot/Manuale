@@ -55,10 +55,22 @@ export default function Sidebar({
         ))}
       </div>
       
-      <div className="sidebar-footer">
+      <div className="sidebar-footer" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <button className="btn btn-secondary" onClick={onAddCategoryClick}>
           <FolderPlus size={16} />
           Nuova Categoria
+        </button>
+        <button className="btn btn-secondary" onClick={() => onViewChange('list')}>
+          <Layers size={16} />
+          Visualizza Problemi
+        </button>
+        <button className="btn btn-secondary" onClick={() => onViewChange('tasks')}>
+          <HardDrive size={16} />
+          Visualizza Task
+        </button>
+        <button className="btn btn-secondary" onClick={() => onViewChange('new-task')}>
+          <HardDrive size={16} />
+          Nuova Task
         </button>
       </div>
     </div>

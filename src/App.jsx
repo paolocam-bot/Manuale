@@ -4,6 +4,9 @@ import IssuesList from './components/IssuesList';
 import IssueDetail from './components/IssueDetail';
 import AddIssueForm from './components/AddIssueForm';
 import AddCategoryModal from './components/AddCategoryModal';
+import TasksPage from './components/TasksPage';
+import NewTaskPage from './components/NewTaskPage';
+import TaskDetail from './components/TaskDetail';
 import { Search } from 'lucide-react';
 
 export default function App() {
@@ -12,8 +15,9 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeView, setActiveView] = useState('list'); // 'list' | 'detail' | 'add-issue'
+  const [activeView, setActiveView] = useState('list'); // 'list' | 'detail' | 'tasks' | 'task-detail' | 'new-task' | 'add-issue'
   const [selectedIssueId, setSelectedIssueId] = useState(null);
+  const [selectedTaskId, setSelectedTaskId] = useState(null);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Load database from Electron on mount
@@ -179,6 +183,28 @@ export default function App() {
               onDelete={handleDeleteIssue}
               onEdit={() => setActiveView('edit-issue')}
             />
+          )}
+
+          {activeView === 'tasks' && (
+            <TasksPage 
+              onCreateTask={() => setActiveView('new-task')} 
+              onSelectTask={(taskId) => {
+                setSelectedTaskId(taskId);
+                setActiveView('task-detail');
+              }}
+            />
+          )}
+
+          {activeView === 'task-detail' && selectedTaskId && (
+            <TaskDetail 
+              taskId={selectedTaskId}
+              categories={categories}
+              onBack={() => setActiveView('tasks')}
+            />
+          )}
+
+          {activeView === 'new-task' && (
+            <NewTaskPage onCancel={() => setActiveView('tasks')} onSaved={() => setActiveView('tasks')} />
           )}
 
           {activeView === 'add-issue' && (
