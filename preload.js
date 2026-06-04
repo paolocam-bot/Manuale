@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   getData: () => ipcRenderer.invoke('get-data'),
@@ -9,7 +9,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   uploadImage: (filePath) => ipcRenderer.invoke('upload-image', filePath),
   uploadImageFile: (file) => {
     try {
-      const nativePath = webUtils.getPathForFile(file);
+      const nativePath = file.path;
+      if (!nativePath) {
+        throw new Error('Percorso file non disponibile. Usa un file input nativo di Electron.');
+      }
       return ipcRenderer.invoke('upload-image', nativePath);
     } catch (err) {
       return Promise.reject(err);

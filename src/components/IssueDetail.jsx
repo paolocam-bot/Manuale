@@ -10,12 +10,16 @@ export default function IssueDetail({ issue, categories, onBack, onDelete, onEdi
     return cat ? cat.name : 'Generico';
   };
 
-  const steps = issue.resolution
-    ? issue.resolution.split('\n').map(l => l.trim()).filter(l => l.length > 0)
-    : [];
+  const steps = issue.resolutionSteps?.length > 0
+    ? issue.resolutionSteps
+    : issue.resolution
+      ? issue.resolution.split('\n').map((l) => l.trim()).filter((l) => l.length > 0).map((text, idx) => ({
+          text,
+          images: idx === 0 ? issue.images || [] : []
+        }))
+      : [];
 
   const cleanStepText = (stepStr) => {
-    // Strips common step prefixes (like "1. ", "1) ", "- ", "* ")
     return stepStr.replace(/^(?:\d+[\.\)]|[\-\*])\s*/, '');
   };
 
@@ -70,62 +74,37 @@ export default function IssueDetail({ issue, categories, onBack, onDelete, onEdi
           <Info size={18} style={{ color: 'var(--accent-indigo)' }} />
           Soluzione e Risoluzione
         </h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
           {steps.length === 0 ? (
             <p style={{ color: 'var(--text-secondary)' }}>Nessuna procedura inserita per questo problema.</p>
           ) : (
             steps.map((step, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, var(--accent-indigo), var(--accent-indigo-hover))',
-                  color: 'white',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontWeight: '700',
-                  fontSize: '0.85rem',
-                  flexShrink: 0,
-                  marginTop: '2px',
-                  boxShadow: '0 2px 8px rgba(99, 102, 241, 0.2)'
-                }}>
-                  {idx + 1}
+              <div key={idx} className="resolution-step-card">
+                <div className="resolution-step-header">
+                  <span>Passo {idx + 1}</span>
                 </div>
-                <div style={{ 
-                  color: 'var(--text-primary)', 
-                  fontSize: '0.975rem', 
-                  lineHeight: '1.6',
-                  flex: 1
-                }}>
-                  {cleanStepText(step)}
-                </div>
+                <div className="resolution-step-text">{cleanStepText(step.text)}</div>
+                {step.images?.length > 0 && (
+                  <div className="resolution-step-images">
+                    {step.images.map((imgName, imageIndex) => (
+                      <div
+                        key={imgName + imageIndex}
+                        className="resolution-step-thumb"
+                        onClick={() => setActiveImage(imgName)}
+                      >
+                        <img src={`app-media://${imgName}`} alt={`Screenshot passo ${idx + 1}`} />
+                        <div className="image-overlay">
+                          <ZoomIn size={20} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             ))
           )}
         </div>
       </div>
-
-      {issue.images && issue.images.length > 0 && (
-        <div className="detail-images-section">
-          <h3 className="section-title">Screenshot e Allegati</h3>
-          <div className="images-grid">
-            {issue.images.map((imgName, index) => (
-              <div 
-                key={index} 
-                className="image-wrapper"
-                onClick={() => setActiveImage(imgName)}
-              >
-                <img src={`app-media://${imgName}`} alt={`Screenshot ${index + 1}`} />
-                <div className="image-overlay">
-                  <ZoomIn size={24} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {activeImage && (
         <div className="lightbox" onClick={() => setActiveImage(null)}>

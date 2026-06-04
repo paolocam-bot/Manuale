@@ -11,11 +11,7 @@ protocol.registerSchemesAsPrivileged([
 let mainWindow;
 
 // Paths
-const isDev = !app.isPackaged;
-const baseDataPath = isDev 
-  ? __dirname 
-  : path.dirname(process.execPath);
-
+const baseDataPath = app.getPath('userData');
 const dbPath = path.join(baseDataPath, 'db.json');
 const imagesDirPath = path.join(baseDataPath, 'images');
 
@@ -35,28 +31,6 @@ const defaultData = {
   ],
   issues: [
     {
-      id: '1',
-      categoryId: 'stampanti',
-      title: 'Spooler di stampa bloccato',
-      description: 'I documenti inviati alla stampante rimangono bloccati nello stato \'In coda\' o \'Eliminazione in corso\', bloccando ogni stampa successiva.',
-      resolution: '1. Premi il tasto Windows + R, digita "services.msc" e premi Invio.\n2. Nella lista dei servizi, individua "Spooler di stampa" (Print Spooler).\n3. Fai click destro su di esso e seleziona "Arresta".\n4. Apri l\'Esplora File di Windows e vai alla cartella: C:\\Windows\\System32\\spool\\PRINTERS.\n5. Elimina tutti i file presenti all\'interno di questa cartella (non eliminare la cartella stessa!).\n6. Torna nella finestra dei Servizi, fai click destro su "Spooler di stampa" e seleziona "Avvia".\n7. Prova a lanciare una nuova stampa di prova.',
-      images: []
-    },
-    {
-      id: '2',
-      categoryId: 'rete',
-      title: 'Nessun accesso a Internet (DNS non risponde)',
-      description: 'Il computer è connesso al Wi-Fi o alla rete cablata, ma i siti web non si caricano e compare l\'errore "DNS server not responding".',
-      resolution: '1. Premi il tasto Windows + X e seleziona "Terminale" o "Prompt dei comandi" come Amministratore.\n2. Digita il comando "ipconfig /flushdns" e premi Invio per svuotare la cache DNS.\n3. Digita "ipconfig /release" seguito da "ipconfig /renew" per richiedere un nuovo indirizzo IP.\n4. Se il problema persiste, premi Windows + R, digita "ncpa.cpl" e primi Invio.\n5. Fai click destro sulla tua scheda di rete attiva e seleziona "Proprietà".\n6. Fai doppio click su "Protocollo Internet versione 4 (TCP/IPv4)".\n7. Seleziona "Utilizza i seguenti indirizzi server DNS" e inserisci:\n   - DNS Primario: 8.8.8.8 (DNS Google)\n   - DNS Secondario: 8.8.4.4\n8. Clicca su OK per confermare.',
-      images: []
-    },
-    {
-      id: '3',
-      categoryId: 'software',
-      title: 'Microsoft Outlook bloccato all\'avvio',
-      description: 'All\'avvio, Microsoft Outlook si blocca sulla schermata di caricamento del profilo o va in crash immediato.',
-      resolution: '1. Assicurati che Outlook sia completamente chiuso (controlla in Gestione Attività).\n2. Premi il tasto Windows + R, digita "outlook.exe /safe" (nota lo spazio prima della barra) e premi Invio.\n3. Se Outlook si avvia correttamente in modalità provvisoria, il problema è causato da un Add-in difettoso.\n4. All\'interno di Outlook, vai su File > Opzioni > Componenti aggiuntivi.\n5. In fondo alla pagina, seleziona "Componenti aggiuntivi COM" nel menu a discesa e clicca su "Vai...".\n6. Deseleziona tutti i componenti aggiuntivi attivi e clicca su OK.\n7. Riavvia Outlook in modalità normale e riabilita gli add-in uno alla volta per identificare quello problematico.',
-      images: []
     }
   ]
 };
@@ -174,13 +148,16 @@ ipcMain.handle('add-category', async (event, categoryName) => {
 // Add Issue
 ipcMain.handle('add-issue', async (event, issueData) => {
   const db = readDb();
+  const resolutionSteps = issueData.resolutionSteps || [];
+  const allImages = resolutionSteps.flatMap(step => step.images || []);
   const newIssue = {
     id: Date.now().toString(),
     categoryId: issueData.categoryId,
     title: issueData.title,
     description: issueData.description,
-    resolution: issueData.resolution,
-    images: issueData.images || []
+    resolution: issueData.resolution || resolutionSteps.map(step => step.text).join('\n'),
+    resolutionSteps,
+    images: allImages
   };
 
   db.issues.push(newIssue);
@@ -194,13 +171,17 @@ ipcMain.handle('edit-issue', async (event, issueId, updatedData) => {
   const index = db.issues.findIndex(i => i.id === issueId);
   if (index === -1) throw new Error('Problema non trovato.');
 
+  const resolutionSteps = updatedData.resolutionSteps || [];
+  const allImages = resolutionSteps.flatMap(step => step.images || []);
+
   db.issues[index] = {
     ...db.issues[index],
     categoryId: updatedData.categoryId,
     title: updatedData.title,
     description: updatedData.description,
-    resolution: updatedData.resolution,
-    images: updatedData.images || []
+    resolution: updatedData.resolution || resolutionSteps.map(step => step.text).join('\n'),
+    resolutionSteps,
+    images: allImages
   };
 
   writeDb(db);
@@ -236,6 +217,10 @@ ipcMain.handle('upload-image', async (event, filePath) => {
   try {
     if (!fs.existsSync(filePath)) {
       throw new Error('Il file originale non esiste.');
+    }
+
+    if (!fs.existsSync(imagesDirPath)) {
+      fs.mkdirSync(imagesDirPath, { recursive: true });
     }
 
     const extension = path.extname(filePath);
